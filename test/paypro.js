@@ -9,8 +9,11 @@ var TestData = require('./testdata');
 
 
 describe('paypro', function() {
-  var xhr, httpNode;
+  var xhr, httpNode, clock;
   before(function() {
+    // Stub time before cert expiration at Mar 27 2016
+    clock = sinon.useFakeTimers(1459105693843);
+
     xhr = {};
     xhr.onCreate = function(req) {};
     xhr.open = function(method, url) {};
@@ -47,6 +50,9 @@ describe('paypro', function() {
 
       return cb(res);
     };
+  });
+  after(function() {
+    clock.restore();
   });
 
   it('Make a PP request with browser', function(done) {
@@ -91,7 +97,8 @@ describe('paypro', function() {
       xhr: xhr,
       env: 'browser',
     }, function(err, res) {
-      err.should.contain('HTTP Request Error');
+      err.should.be.an.instanceOf(Error);
+      err.message.should.equal('HTTP Request Error');
       done();
     });
   });
@@ -106,7 +113,8 @@ describe('paypro', function() {
       xhr: xhr,
       env: 'browser',
     }, function(err, res) {
-      err.should.contain('myerror');
+      err.should.be.an.instanceOf(Error);
+      err.message.should.equal('myerror');
       done();
     });
   });
@@ -138,7 +146,8 @@ describe('paypro', function() {
       httpNode: httpNode,
       env: 'node',
     }, function(err, res) {
-      err.should.contain('HTTP Request Error');
+      err.should.be.an.instanceOf(Error);
+      err.message.should.equal('HTTP Request Error');
       done();
     });
   });

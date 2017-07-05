@@ -1,20 +1,13 @@
+var bitcoreTasks = require('bitcore-build');
 module.exports = function(grunt) {
 
   // Project configuration.
   grunt.initConfig({
-    pkg: grunt.file.readJSON('package.json'),
-    jsdoc: {
-      dist: {
-        src: ['lib/*.js'],
-        options: {
-          destination: 'docs'
-        }
-      }
-    }
+    pkg: grunt.file.readJSON('package.json')
   });
 
-  grunt.loadNpmTasks('grunt-jsdoc');
-
+  bitcoreTasks('wallet-client');
+  console.log(bitcoreTasks());
   // Default task(s).
-  grunt.registerTask('default', []);
+  grunt.registerTask('default', ['browser']);
 };
