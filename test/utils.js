@@ -4,7 +4,7 @@ var _ = require('lodash');
 var chai = require('chai');
 var sinon = require('sinon');
 var should = chai.should();
-var Bitcore = require('digibyte');
+var Digibyte = require('digibyte');
 
 var Utils = require('../lib/common/utils');
 
@@ -58,19 +58,19 @@ describe('Utils', function() {
         args: [1, 'bit'],
         expected: '0',
       }, {
-        args: [1, 'btc'],
+        args: [1, 'dgb'],
         expected: '0.00',
       }, {
-        args: [400050000, 'btc'],
+        args: [400050000, 'dgb'],
         expected: '4.0005',
       }, {
-        args: [400000000, 'btc'],
+        args: [400000000, 'dgb'],
         expected: '4.00',
       }, {
-        args: [49999, 'btc'],
+        args: [49999, 'dgb'],
         expected: '0.000499',
       }, {
-        args: [100000000, 'btc'],
+        args: [100000000, 'dgb'],
         expected: '1.00',
       }, {
         args: [0, 'bit'],
@@ -79,19 +79,19 @@ describe('Utils', function() {
         args: [12345678, 'bit'],
         expected: '123,456',
       }, {
-        args: [12345678, 'btc'],
+        args: [12345678, 'dgb'],
         expected: '0.123456',
       }, {
-        args: [12345611, 'btc'],
+        args: [12345611, 'dgb'],
         expected: '0.123456',
       }, {
-        args: [1234, 'btc'],
+        args: [1234, 'dgb'],
         expected: '0.000012',
       }, {
-        args: [1299, 'btc'],
+        args: [1299, 'dgb'],
         expected: '0.000012',
       }, {
-        args: [1234567899999, 'btc'],
+        args: [1234567899999, 'dgb'],
         expected: '12,345.678999',
       }, {
         args: [12345678, 'bit', {
@@ -99,12 +99,12 @@ describe('Utils', function() {
         }],
         expected: '123.456',
       }, {
-        args: [12345678, 'btc', {
+        args: [12345678, 'dgb', {
           decimalSeparator: ','
         }],
         expected: '0,123456',
       }, {
-        args: [1234567899999, 'btc', {
+        args: [1234567899999, 'dgb', {
           thousandsSeparator: ' ',
           decimalSeparator: ','
         }],
@@ -120,7 +120,7 @@ describe('Utils', function() {
         args: [1, 'bit'],
         expected: '0.01',
       }, {
-        args: [1, 'btc'],
+        args: [1, 'dgb'],
         expected: '0.00000001',
       }, {
         args: [0, 'bit'],
@@ -129,22 +129,22 @@ describe('Utils', function() {
         args: [12345678, 'bit'],
         expected: '123,456.78',
       }, {
-        args: [12345678, 'btc'],
+        args: [12345678, 'dgb'],
         expected: '0.12345678',
       }, {
-        args: [1234567, 'btc'],
+        args: [1234567, 'dgb'],
         expected: '0.01234567',
       }, {
-        args: [12345611, 'btc'],
+        args: [12345611, 'dgb'],
         expected: '0.12345611',
       }, {
-        args: [1234, 'btc'],
+        args: [1234, 'dgb'],
         expected: '0.00001234',
       }, {
-        args: [1299, 'btc'],
+        args: [1299, 'dgb'],
         expected: '0.00001299',
       }, {
-        args: [1234567899999, 'btc'],
+        args: [1234567899999, 'dgb'],
         expected: '12,345.67899999',
       }, {
         args: [12345678, 'bit', {
@@ -152,12 +152,12 @@ describe('Utils', function() {
         }],
         expected: "123'456.78",
       }, {
-        args: [12345678, 'btc', {
+        args: [12345678, 'dgb', {
           decimalSeparator: ','
         }],
         expected: '0,12345678',
       }, {
-        args: [1234567899999, 'btc', {
+        args: [1234567899999, 'dgb', {
           thousandsSeparator: ' ',
           decimalSeparator: ','
         }],
@@ -226,14 +226,14 @@ describe('Utils', function() {
 
   describe('#privateKeyToAESKey', function() {
     it('should be ok', function() {
-      var privKey = new Bitcore.PrivateKey('09458c090a69a38368975fb68115df2f4b0ab7d1bc463fc60c67aa1730641d6c').toString();
+      var privKey = new Digibyte.PrivateKey('09458c090a69a38368975fb68115df2f4b0ab7d1bc463fc60c67aa1730641d6c').toString();
       Utils.privateKeyToAESKey(privKey).should.be.equal('2HvmUYBSD0gXLea6z0n7EQ==');
     });
     it('should fail if pk has invalid values', function() {
       var values = [
         null,
         123,
-        '123',
+        'x123',
       ];
       _.each(values, function(value) {
         var valid = true;
@@ -249,9 +249,9 @@ describe('Utils', function() {
 
   describe('#verifyRequestPubKey', function() {
     it('should generate and check request pub key', function() {
-      var reqPubKey = (new Bitcore.PrivateKey).toPublicKey();
-      var xPrivKey = new Bitcore.HDPrivateKey();
-      var xPubKey = new Bitcore.HDPublicKey(xPrivKey);
+      var reqPubKey = (new Digibyte.PrivateKey).toPublicKey();
+      var xPrivKey = new Digibyte.HDPrivateKey();
+      var xPubKey = new Digibyte.HDPublicKey(xPrivKey);
 
 
       var sig = Utils.signRequestPubKey(reqPubKey.toString(), xPrivKey);
@@ -261,12 +261,12 @@ describe('Utils', function() {
 
     it('should fail to check a request pub key with wrong key', function() {
       var reqPubKey = '02c2c1c6e75cfc50235ff4a2eb848385c2871b8c94e285ee82eaced1dcd5dd568e';
-      var xPrivKey = new Bitcore.HDPrivateKey();
-      var xPubKey = new Bitcore.HDPublicKey(xPrivKey);
+      var xPrivKey = new Digibyte.HDPrivateKey();
+      var xPubKey = new Digibyte.HDPublicKey(xPrivKey);
       var sig = Utils.signRequestPubKey(reqPubKey, xPrivKey);
 
-      var xPrivKey2 = new Bitcore.HDPrivateKey();
-      var xPubKey2 = new Bitcore.HDPublicKey(xPrivKey2);
+      var xPrivKey2 = new Digibyte.HDPrivateKey();
+      var xPubKey2 = new Digibyte.HDPublicKey(xPrivKey2);
       var valid = Utils.verifyRequestPubKey(reqPubKey, sig, xPubKey2);
       valid.should.be.equal(false);
     });

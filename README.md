@@ -4,20 +4,20 @@
 [![Build Status](https://img.shields.io/travis/bitpay/bitcore-wallet-client.svg?branch=master&style=flat-square)](https://travis-ci.org/bitpay/bitcore-wallet-client)
 [![Coverage Status](https://coveralls.io/repos/bitpay/bitcore-wallet-client/badge.svg)](https://coveralls.io/r/bitpay/bitcore-wallet-client)
 
-The *official* client library for [bitcore-wallet-service] (https://github.com/bitpay/bitcore-wallet-service).
+The *official* client library for [digibytejs-wallet-service](https://github.com/digibyte/digibytejs-wallet-service).
 
 ## Description
 
-This package communicates with BWS [Bitcore wallet service](https://github.com/bitpay/bitcore-wallet-service) using the REST API. All REST endpoints are wrapped as simple async methods. All relevant responses from BWS are checked independently by the peers, thus the importance of using this library when talking to a third party BWS instance.
+This package communicates with BWS [DigiByteJS wallet service](https://github.com/bitpay/digibytejs-wallet-service) using the REST API. All REST endpoints are wrapped as simple async methods. All relevant responses from DWS are checked independently by the peers, thus the importance of using this library when talking to a third party DWS instance.
 
-See [Bitcore-wallet] (https://github.com/bitpay/bitcore-wallet) for a simple CLI wallet implementation that relays on BWS and uses bitcore-wallet-client.
+See [Bitcore-wallet](https://github.com/bitpay/bitcore-wallet) for a simple CLI wallet implementation that relays on BWS and uses bitcore-wallet-client.
 
 ## Get Started
 
-You can start using bitcore-wallet-client in any of these two ways:
+You can start using digibytejs-wallet-client in any of these two ways:
 
-* via [Bower](http://bower.io/): by running `bower install bitcore-wallet-client` from your console
-* or via [NPM](https://www.npmjs.com/package/bitcore-wallet-client): by running `npm install bitcore-wallet-client` from your console.
+* via [Bower](http://bower.io/): by running `bower install digibytejs-wallet-client` from your console
+* or via [NPM](https://www.npmjs.com/package/digibytejs-wallet-client): by running `npm install digibytejs-wallet-client` from your console.
 
 ## Example
 
@@ -28,14 +28,14 @@ Then create two files `irene.js` and `tomas.js` with the content below:
 **irene.js**
 
 ``` javascript
-var Client = require('bitcore-wallet-client');
+var Client = require('digibytejs-wallet-client');
 
 
 var fs = require('fs');
-var BWS_INSTANCE_URL = 'https://bws.bitpay.com/bws/api'
+var DWS_INSTANCE_URL = 'https://dws.bitpay.com/dws/api'
 
 var client = new Client({
-  baseUrl: BWS_INSTANCE_URL,
+  baseUrl: DWS_INSTANCE_URL,
   verbose: false,
 });
 
@@ -54,7 +54,7 @@ client.createWallet("My Wallet", "Irene", 2, 2, {network: 'testnet'}, function(e
 
 ``` javascript
 
-var Client = require('bitcore-wallet-client');
+var Client = require('digibytejs-wallet-client');
 
 
 var fs = require('fs');
