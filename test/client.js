@@ -113,15 +113,12 @@ helpers.createAndJoinWallet = function(clients, m, n, opts, cb) {
 
   opts = opts || {};
 
-  var coin = opts.coin || 'dgb';
   var network = opts.network || 'testnet';
 
   clients[0].seedFromRandomWithMnemonic({
-    coin: coin,
     network: network,
   });
   clients[0].createWallet('mywallet', 'creator', m, n, {
-    coin: coin,
     network: network,
     singleAddress: !!opts.singleAddress,
   }, function(err, secret) {
@@ -136,11 +133,9 @@ helpers.createAndJoinWallet = function(clients, m, n, opts, cb) {
         function(next) {
           async.each(_.range(1, n), function(i, cb) {
             clients[i].seedFromRandomWithMnemonic({
-              coin: coin,
               network: network
             });
             clients[i].joinWallet(secret, 'copayer ' + i, {
-              coin: coin
             }, cb);
           }, next);
         },
@@ -963,12 +958,10 @@ describe('client API', function() {
         var walletId = Uuid.v4();
         var walletPrivKey = new Digibyte.PrivateKey();
         var network = i % 2 == 0 ? 'testnet' : 'livenet';
-        var coin = 'dgb'
-        var secret = Client._buildSecret(walletId, walletPrivKey, coin, network);
+        var secret = Client._buildSecret(walletId, walletPrivKey, network);
         var result = Client.parseSecret(secret);
         result.walletId.should.equal(walletId);
         result.walletPrivKey.toString().should.equal(walletPrivKey.toString());
-        result.coin.should.equal(coin);
         result.network.should.equal(network);
       };
     });
@@ -981,18 +974,12 @@ describe('client API', function() {
     it('should create secret and parse secret from string', function() {
       var walletId = Uuid.v4();
       var walletPrivKey = new Digibyte.PrivateKey();
-      var coin = 'dgb';
       var network = 'testnet';
-      var secret = Client._buildSecret(walletId, walletPrivKey.toString(), coin, network);
+      var secret = Client._buildSecret(walletId, walletPrivKey.toString(), network);
       var result = Client.parseSecret(secret);
       result.walletId.should.equal(walletId);
       result.walletPrivKey.toString().should.equal(walletPrivKey.toString());
-      result.coin.should.equal(coin);
       result.network.should.equal(network);
-    });
-    it('should default to dgb for secrets not specifying coin', function() {
-      var result = Client.parseSecret('5ZN64RxKWCJXcy1pZwgrAzL1NnN5FQic5M2tLJVG5bEHaGXNRQs2uzJjMa9pMAbP5rz9Vu2xSaT');
-      result.coin.should.equal('dgb');
     });
   });
 
@@ -2465,9 +2452,8 @@ describe('client API', function() {
 
   describe('Transaction Proposal signing', function() {
     this.timeout(5000);
-    function setup(m, n, coin, network, cb) {
+    function setup(m, n, network, cb) {
       helpers.createAndJoinWallet(clients, m, n, {
-        coin: coin,
         network: network,
       }, function(w) {
         clients[0].createAddress(function(err, address) {
@@ -2616,7 +2602,6 @@ describe('client API', function() {
             clients[0].payProHttp = clients[1].payProHttp = http;
 
             clients[0].fetchPayPro(opts, function(err, paypro) {
-              http.getCall(0).args[0].coin.should.equal('dgb');
 
               helpers.createAndPublishTxProposal(clients[0], {
                 toAddress: paypro.toAddress,
@@ -2793,7 +2778,6 @@ describe('client API', function() {
             clients[0].payProHttp = clients[1].payProHttp = http;
 
             clients[0].fetchPayPro(opts, function(err, paypro) {
-              http.getCall(0).args[0].coin.should.equal('dgb');
               paypro.requiredFeeRate.should.equal(1);
               helpers.createAndPublishTxProposal(clients[0], {
                 toAddress: paypro.toAddress,
@@ -2884,7 +2868,6 @@ describe('client API', function() {
             clients[0].payProHttp = clients[1].payProHttp = http;
 
             clients[0].fetchPayPro(opts, function(err, paypro) {
-              http.getCall(0).args[0].coin.should.equal('dgb');
               helpers.createAndPublishTxProposal(clients[0], {
                 toAddress: paypro.toAddress,
                 amount: paypro.amount,
@@ -5174,11 +5157,10 @@ describe('client API', function() {
         var address = {
           address: addr[0],
           type: 'P2PKH',
-          coin: coin,
         };
         helpers.createAndJoinWallet(clients, 1, 1, function() {
           blockchainExplorerMock.setUtxo(address, 123, 1);
-          clients[0].getBalanceFromPrivateKey('5KjBgBiadWGhjWmLN1v4kcEZqWSZFqzgv7cSUuZNJg4tD82c4xp', coin, function(err, balance) {
+          clients[0].getBalanceFromPrivateKey('5KjBgBiadWGhjWmLN1v4kcEZqWSZFqzgv7cSUuZNJg4tD82c4xp', function(err, balance) {
             should.not.exist(err);
             balance.should.equal(123 * 1e8);
             done();
@@ -5189,12 +5171,10 @@ describe('client API', function() {
         var address = {
           address: addr[0],
           type: 'P2PKH',
-          coin: coin,
         };
         helpers.createAndJoinWallet(clients, 1, 1, function() {
           blockchainExplorerMock.setUtxo(address, 123, 1);
           clients[0].buildTxFromPrivateKey('5KjBgBiadWGhjWmLN1v4kcEZqWSZFqzgv7cSUuZNJg4tD82c4xp', addr[1], { 
-            coin: coin
           }, function(err, tx) {
             should.not.exist(err);
             should.exist(tx);
@@ -5218,12 +5198,10 @@ describe('client API', function() {
         var address = {
           address: addr[0],
           type: 'P2PKH',
-          coin: coin,
         };
         helpers.createAndJoinWallet(clients, 1, 1, function() {
           blockchainExplorerMock.setUtxo(address, 123, 1);
           clients[0].buildTxFromPrivateKey('5KjBgBiadWGhjWmLN1v4kcEZqWSZFqzgv7cSUuZNJg4tD82c4xp', addr[1],  {
-            coin: coin,
           }, function(err, tx) {
             should.exist(err);
             should.not.exist(tx);
@@ -5238,13 +5216,11 @@ describe('client API', function() {
         var address = {
           address: addr[0],
           type: 'P2PKH',
-          coin: coin,
         };
         helpers.createAndJoinWallet(clients, 1, 1, function() {
           blockchainExplorerMock.setUtxo(address, 123 / 1e8, 1);
           clients[0].buildTxFromPrivateKey('5KjBgBiadWGhjWmLN1v4kcEZqWSZFqzgv7cSUuZNJg4tD82c4xp', addr[1], {
             fee: 500,
-            coin: coin,
           }, function(err, tx) {
             should.exist(err);
             err.should.be.an.instanceOf(Errors.INSUFFICIENT_FUNDS);
