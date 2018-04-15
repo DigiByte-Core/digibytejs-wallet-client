@@ -17,7 +17,7 @@ var tingodb = require('tingodb')({
 var log = require('../lib/log');
 
 var Digibyte = require('digibyte');
-var BitcorePayPro = require('bitcore-payment-protocol');
+var BitcorePayPro = require('digibytejs-payment-protocol');
 
 var BWS = require('digibytejs-wallet-service');
 
