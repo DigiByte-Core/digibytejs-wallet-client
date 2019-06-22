@@ -2711,7 +2711,7 @@ API.prototype.createWalletFromOldCopay = function(username, password, blob, cb) 
 module.exports = API;
 
 }).call(this,require("buffer").Buffer)
-},{"../package.json":295,"./common":5,"./credentials":7,"./errors":8,"./log":11,"./paypro":12,"./verifier":13,"async":33,"bip38":40,"buffer":75,"digibyte":98,"digibytejs-mnemonic":148,"events":184,"json-stable-stringify":206,"lodash":211,"preconditions":228,"querystring":245,"sjcl":272,"superagent":280,"url":288,"util":292}],3:[function(require,module,exports){
+},{"../package.json":296,"./common":5,"./credentials":7,"./errors":8,"./log":11,"./paypro":12,"./verifier":13,"async":33,"bip38":40,"buffer":75,"digibyte":98,"digibytejs-mnemonic":148,"events":184,"json-stable-stringify":206,"lodash":211,"preconditions":228,"querystring":245,"sjcl":272,"superagent":280,"url":288,"util":293}],3:[function(require,module,exports){
 'use strict';
 
 var Constants = {};
@@ -5275,7 +5275,7 @@ Entity.prototype.encode = function encode(data, enc, /* internal */ reporter) {
   return this._getEncoder(enc).encode(data, reporter);
 };
 
-},{"../asn1":15,"inherits":203,"vm":293}],17:[function(require,module,exports){
+},{"../asn1":15,"inherits":203,"vm":294}],17:[function(require,module,exports){
 var inherits = require('inherits');
 var Reporter = require('../base').Reporter;
 var Buffer = require('buffer').Buffer;
@@ -9194,145 +9194,87 @@ function hasOwnProperty(obj, prop) {
 
 }).call(this,require('_process'),require("timers").setImmediate)
 },{"_process":234,"timers":285}],34:[function(require,module,exports){
-// base-x encoding / decoding
-// Copyright (c) 2018 base-x contributors
-// Copyright (c) 2014-2018 The Bitcoin Core developers (base58.cpp)
-// Distributed under the MIT software license, see the accompanying
-// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
+// base-x encoding
+// Forked from https://github.com/cryptocoinjs/bs58
+// Originally written by Mike Hearn for BitcoinJ
+// Copyright (c) 2011 Google Inc
+// Ported to JavaScript by Stefan Thomas
+// Merged Buffer refactorings from base58-native by Stephen Pair
+// Copyright (c) 2013 BitPay Inc
 
-const Buffer = require('safe-buffer').Buffer
+var Buffer = require('safe-buffer').Buffer
 
 module.exports = function base (ALPHABET) {
-  if (ALPHABET.length >= 255) throw new TypeError('Alphabet too long')
+  var ALPHABET_MAP = {}
+  var BASE = ALPHABET.length
+  var LEADER = ALPHABET.charAt(0)
 
-  const BASE_MAP = new Uint8Array(256)
-  BASE_MAP.fill(255)
+  // pre-compute lookup table
+  for (var z = 0; z < ALPHABET.length; z++) {
+    var x = ALPHABET.charAt(z)
 
-  for (let i = 0; i < ALPHABET.length; i++) {
-    const x = ALPHABET.charAt(i)
-    const xc = x.charCodeAt(0)
-
-    if (BASE_MAP[xc] !== 255) throw new TypeError(x + ' is ambiguous')
-    BASE_MAP[xc] = i
+    if (ALPHABET_MAP[x] !== undefined) throw new TypeError(x + ' is ambiguous')
+    ALPHABET_MAP[x] = z
   }
-
-  const BASE = ALPHABET.length
-  const LEADER = ALPHABET.charAt(0)
-  const FACTOR = Math.log(BASE) / Math.log(256) // log(BASE) / log(256), rounded up
-  const iFACTOR = Math.log(256) / Math.log(BASE) // log(256) / log(BASE), rounded up
 
   function encode (source) {
-    if (!Buffer.isBuffer(source)) throw new TypeError('Expected Buffer')
     if (source.length === 0) return ''
 
-    // Skip & count leading zeroes.
-    let zeroes = 0
-    let length = 0
-    let pbegin = 0
-    const pend = source.length
-
-    while (pbegin !== pend && source[pbegin] === 0) {
-      pbegin++
-      zeroes++
-    }
-
-    // Allocate enough space in big-endian base58 representation.
-    const size = ((pend - pbegin) * iFACTOR + 1) >>> 0
-    const b58 = new Uint8Array(size)
-
-    // Process the bytes.
-    while (pbegin !== pend) {
-      let carry = source[pbegin]
-
-      // Apply "b58 = b58 * 256 + ch".
-      let i = 0
-      for (let it = size - 1; (carry !== 0 || i < length) && (it !== -1); it--, i++) {
-        carry += (256 * b58[it]) >>> 0
-        b58[it] = (carry % BASE) >>> 0
-        carry = (carry / BASE) >>> 0
+    var digits = [0]
+    for (var i = 0; i < source.length; ++i) {
+      for (var j = 0, carry = source[i]; j < digits.length; ++j) {
+        carry += digits[j] << 8
+        digits[j] = carry % BASE
+        carry = (carry / BASE) | 0
       }
 
-      if (carry !== 0) throw new Error('Non-zero carry')
-      length = i
-      pbegin++
+      while (carry > 0) {
+        digits.push(carry % BASE)
+        carry = (carry / BASE) | 0
+      }
     }
 
-    // Skip leading zeroes in base58 result.
-    let it = size - length
-    while (it !== size && b58[it] === 0) {
-      it++
-    }
+    var string = ''
 
-    // Translate the result into a string.
-    let str = LEADER.repeat(zeroes)
-    for (; it < size; ++it) str += ALPHABET.charAt(b58[it])
+    // deal with leading zeros
+    for (var k = 0; source[k] === 0 && k < source.length - 1; ++k) string += ALPHABET[0]
+    // convert digits to a string
+    for (var q = digits.length - 1; q >= 0; --q) string += ALPHABET[digits[q]]
 
-    return str
+    return string
   }
 
-  function decodeUnsafe (source) {
-    if (typeof source !== 'string') throw new TypeError('Expected String')
-    if (source.length === 0) return Buffer.alloc(0)
+  function decodeUnsafe (string) {
+    if (typeof string !== 'string') throw new TypeError('Expected String')
+    if (string.length === 0) return Buffer.allocUnsafe(0)
 
-    let psz = 0
+    var bytes = [0]
+    for (var i = 0; i < string.length; i++) {
+      var value = ALPHABET_MAP[string[i]]
+      if (value === undefined) return
 
-    // Skip leading spaces.
-    if (source[psz] === ' ') return
-
-    // Skip and count leading '1's.
-    let zeroes = 0
-    let length = 0
-    while (source[psz] === LEADER) {
-      zeroes++
-      psz++
-    }
-
-    // Allocate enough space in big-endian base256 representation.
-    const size = (((source.length - psz) * FACTOR) + 1) >>> 0 // log(58) / log(256), rounded up.
-    const b256 = new Uint8Array(size)
-
-    // Process the characters.
-    while (source[psz]) {
-      // Decode character
-      let carry = BASE_MAP[source.charCodeAt(psz)]
-
-      // Invalid character
-      if (carry === 255) return
-
-      let i = 0
-      for (let it = size - 1; (carry !== 0 || i < length) && (it !== -1); it--, i++) {
-        carry += (BASE * b256[it]) >>> 0
-        b256[it] = (carry % 256) >>> 0
-        carry = (carry / 256) >>> 0
+      for (var j = 0, carry = value; j < bytes.length; ++j) {
+        carry += bytes[j] * BASE
+        bytes[j] = carry & 0xff
+        carry >>= 8
       }
 
-      if (carry !== 0) throw new Error('Non-zero carry')
-      length = i
-      psz++
+      while (carry > 0) {
+        bytes.push(carry & 0xff)
+        carry >>= 8
+      }
     }
 
-    // Skip trailing spaces.
-    if (source[psz] === ' ') return
-
-    // Skip leading zeroes in b256.
-    let it = size - length
-    while (it !== size && b256[it] === 0) {
-      it++
+    // deal with leading zeros
+    for (var k = 0; string[k] === LEADER && k < string.length - 1; ++k) {
+      bytes.push(0)
     }
 
-    const vch = Buffer.allocUnsafe(zeroes + (size - it))
-    vch.fill(0x00, 0, zeroes)
-
-    let j = zeroes
-    while (it !== size) {
-      vch[j++] = b256[it++]
-    }
-
-    return vch
+    return Buffer.from(bytes.reverse())
   }
 
   function decode (string) {
-    const buffer = decodeUnsafe(string)
+    var buffer = decodeUnsafe(string)
     if (buffer) return buffer
 
     throw new Error('Non-base' + BASE + ' character')
@@ -11113,36 +11055,39 @@ require('./convert')
 module.exports = BigInteger
 },{"./bigi":36,"./convert":37}],39:[function(require,module,exports){
 module.exports={
-  "_from": "bigi@^1.2.0",
+  "_args": [
+    [
+      "bigi@1.4.2",
+      "/mnt/g/developer/digibyte/digiassets/digibytejs-wallet-client"
+    ]
+  ],
+  "_from": "bigi@1.4.2",
   "_id": "bigi@1.4.2",
   "_inBundle": false,
   "_integrity": "sha1-nGZalfiLiwj8Bc/XMfVhhZ1yWCU=",
   "_location": "/bigi",
   "_phantomChildren": {},
   "_requested": {
-    "type": "range",
+    "type": "version",
     "registry": true,
-    "raw": "bigi@^1.2.0",
+    "raw": "bigi@1.4.2",
     "name": "bigi",
     "escapedName": "bigi",
-    "rawSpec": "^1.2.0",
+    "rawSpec": "1.4.2",
     "saveSpec": null,
-    "fetchSpec": "^1.2.0"
+    "fetchSpec": "1.4.2"
   },
   "_requiredBy": [
     "/bip38",
     "/ecurve"
   ],
   "_resolved": "https://registry.npmjs.org/bigi/-/bigi-1.4.2.tgz",
-  "_shasum": "9c665a95f88b8b08fc05cfd731f561859d725825",
-  "_spec": "bigi@^1.2.0",
-  "_where": "/mnt/g/developer/digibyte/digiassets/digibytejs-wallet-client/node_modules/bip38",
+  "_spec": "1.4.2",
+  "_where": "/mnt/g/developer/digibyte/digiassets/digibytejs-wallet-client",
   "bugs": {
     "url": "https://github.com/cryptocoinjs/bigi/issues"
   },
-  "bundleDependencies": false,
   "dependencies": {},
-  "deprecated": false,
   "description": "Big integers.",
   "devDependencies": {
     "coveralls": "^2.11.2",
@@ -53799,23 +53744,29 @@ arguments[4][30][0].apply(exports,arguments)
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],147:[function(require,module,exports){
 module.exports={
-  "_from": "digibyte@^0.14.6",
+  "_args": [
+    [
+      "digibyte@0.14.8",
+      "/mnt/g/developer/digibyte/digiassets/digibytejs-wallet-client"
+    ]
+  ],
+  "_from": "digibyte@0.14.8",
   "_id": "digibyte@0.14.8",
   "_inBundle": false,
   "_integrity": "sha512-UYFDpFjShozW7RtdEwiCaAjjobUXJ64Eg0cxryxeio3pRyZ/ZlYCkrchDaCtbHyNb8v4k5RBT/ofbIDwQiVOLw==",
   "_location": "/digibyte",
   "_phantomChildren": {
-    "base-x": "3.0.5"
+    "base-x": "3.0.3 "
   },
   "_requested": {
-    "type": "range",
+    "type": "version",
     "registry": true,
-    "raw": "digibyte@^0.14.6",
+    "raw": "digibyte@0.14.8",
     "name": "digibyte",
     "escapedName": "digibyte",
-    "rawSpec": "^0.14.6",
+    "rawSpec": "0.14.8",
     "saveSpec": null,
-    "fetchSpec": "^0.14.6"
+    "fetchSpec": "0.14.8"
   },
   "_requiredBy": [
     "/",
@@ -53824,8 +53775,7 @@ module.exports={
     "/digibytejs-wallet-service"
   ],
   "_resolved": "https://registry.npmjs.org/digibyte/-/digibyte-0.14.8.tgz",
-  "_shasum": "85b0fd16d5537da98366e52069728c7c243d9dfe",
-  "_spec": "digibyte@^0.14.6",
+  "_spec": "0.14.8",
   "_where": "/mnt/g/developer/digibyte/digiassets/digibytejs-wallet-client",
   "author": {
     "name": "DigiByte",
@@ -53837,7 +53787,6 @@ module.exports={
   "bugs": {
     "url": "https://github.com/digicontributer/digibyte-js/issues"
   },
-  "bundleDependencies": false,
   "contributors": [
     {
       "name": "Daniel Cousens",
@@ -53892,7 +53841,6 @@ module.exports={
     "inherits": "=2.0.1",
     "lodash": "=4.17.4"
   },
-  "deprecated": false,
   "description": "A pure and powerful JavaScript DigiByte library.",
   "devDependencies": {
     "brfs": "^1.2.0",
@@ -59639,7 +59587,13 @@ utils.intFromLE = intFromLE;
 
 },{"bn.js":41,"minimalistic-assert":215,"minimalistic-crypto-utils":216}],183:[function(require,module,exports){
 module.exports={
-  "_from": "elliptic@=6.4.0",
+  "_args": [
+    [
+      "elliptic@6.4.0",
+      "/mnt/g/developer/digibyte/digiassets/digibytejs-wallet-client"
+    ]
+  ],
+  "_from": "elliptic@6.4.0",
   "_id": "elliptic@6.4.0",
   "_inBundle": false,
   "_integrity": "sha1-ysmvh2LIWDYYcAPI3+GT5eLq5d8=",
@@ -59648,12 +59602,12 @@ module.exports={
   "_requested": {
     "type": "version",
     "registry": true,
-    "raw": "elliptic@=6.4.0",
+    "raw": "elliptic@6.4.0",
     "name": "elliptic",
     "escapedName": "elliptic",
-    "rawSpec": "=6.4.0",
+    "rawSpec": "6.4.0",
     "saveSpec": null,
-    "fetchSpec": "=6.4.0"
+    "fetchSpec": "6.4.0"
   },
   "_requiredBy": [
     "/browserify-sign",
@@ -59661,9 +59615,8 @@ module.exports={
     "/digibyte"
   ],
   "_resolved": "https://registry.npmjs.org/elliptic/-/elliptic-6.4.0.tgz",
-  "_shasum": "cac9af8762c85836187003c8dfe193e5e2eae5df",
-  "_spec": "elliptic@=6.4.0",
-  "_where": "/mnt/g/developer/digibyte/digiassets/digibytejs-wallet-client/node_modules/digibyte",
+  "_spec": "6.4.0",
+  "_where": "/mnt/g/developer/digibyte/digiassets/digibytejs-wallet-client",
   "author": {
     "name": "Fedor Indutny",
     "email": "fedor@indutny.com"
@@ -59671,7 +59624,6 @@ module.exports={
   "bugs": {
     "url": "https://github.com/indutny/elliptic/issues"
   },
-  "bundleDependencies": false,
   "dependencies": {
     "bn.js": "^4.4.0",
     "brorand": "^1.0.1",
@@ -59681,7 +59633,6 @@ module.exports={
     "minimalistic-assert": "^1.0.0",
     "minimalistic-crypto-utils": "^1.0.0"
   },
-  "deprecated": false,
   "description": "EC cryptography",
   "devDependencies": {
     "brfs": "^1.4.3",
@@ -61636,8 +61587,35 @@ module.exports = function(arr, obj){
   return -1;
 };
 },{}],203:[function(require,module,exports){
-arguments[4][30][0].apply(exports,arguments)
-},{"dup":30}],204:[function(require,module,exports){
+if (typeof Object.create === 'function') {
+  // implementation from standard node.js 'util' module
+  module.exports = function inherits(ctor, superCtor) {
+    if (superCtor) {
+      ctor.super_ = superCtor
+      ctor.prototype = Object.create(superCtor.prototype, {
+        constructor: {
+          value: ctor,
+          enumerable: false,
+          writable: true,
+          configurable: true
+        }
+      })
+    }
+  };
+} else {
+  // old school shim for old browsers
+  module.exports = function inherits(ctor, superCtor) {
+    if (superCtor) {
+      ctor.super_ = superCtor
+      var TempCtor = function () {}
+      TempCtor.prototype = superCtor.prototype
+      ctor.prototype = new TempCtor()
+      ctor.prototype.constructor = ctor
+    }
+  }
+}
+
+},{}],204:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -89239,7 +89217,8 @@ module.exports = validatorFunctions;
 (function (process){
 'use strict';
 
-if (!process.version ||
+if (typeof process === 'undefined' ||
+    !process.version ||
     process.version.indexOf('v0.') === 0 ||
     process.version.indexOf('v1.') === 0 && process.version.indexOf('v1.8.') !== 0) {
   module.exports = { nextTick: nextTick };
@@ -99613,7 +99592,7 @@ http.METHODS = [
 	'UNSUBSCRIBE'
 ]
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./lib/request":276,"./lib/response":277,"builtin-status-codes":76,"url":288,"xtend":294}],275:[function(require,module,exports){
+},{"./lib/request":276,"./lib/response":277,"builtin-status-codes":76,"url":288,"xtend":295}],275:[function(require,module,exports){
 (function (global){
 exports.fetch = isFunction(global.fetch) && isFunction(global.ReadableStream)
 
@@ -103795,10 +103774,12 @@ function config (name) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],291:[function(require,module,exports){
+arguments[4][30][0].apply(exports,arguments)
+},{"dup":30}],292:[function(require,module,exports){
 arguments[4][31][0].apply(exports,arguments)
-},{"dup":31}],292:[function(require,module,exports){
+},{"dup":31}],293:[function(require,module,exports){
 arguments[4][32][0].apply(exports,arguments)
-},{"./support/isBuffer":291,"_process":234,"dup":32,"inherits":203}],293:[function(require,module,exports){
+},{"./support/isBuffer":292,"_process":234,"dup":32,"inherits":291}],294:[function(require,module,exports){
 var indexOf = require('indexof');
 
 var Object_keys = function (obj) {
@@ -103938,7 +103919,7 @@ exports.createContext = Script.createContext = function (context) {
     return copy;
 };
 
-},{"indexof":202}],294:[function(require,module,exports){
+},{"indexof":202}],295:[function(require,module,exports){
 module.exports = extend
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -103959,7 +103940,7 @@ function extend() {
     return target
 }
 
-},{}],295:[function(require,module,exports){
+},{}],296:[function(require,module,exports){
 module.exports={
   "name": "digibytejs-wallet-client",
   "description": "Client for digibytejs-wallet-service",
@@ -103987,7 +103968,7 @@ module.exports={
   "dependencies": {
     "async": "^0.9.0",
     "bip38": "^1.3.0",
-    "digibyte": "^0.14.6",
+    "digibyte": "=0.14.8",
     "digibytejs-mnemonic": "git+https://github.com/digicontributer/digibytejs-mnemonic.git#248bad288a3f70d90f3743044f7c85888bcf3537",
     "digibytejs-payment-protocol": "git+https://github.com/digicontributer/digibytejs-payment-protocol.git#05c689f1ddf3dcaa404d2c8048d4c79ac9195a35",
     "json-stable-stringify": "^1.0.0",
