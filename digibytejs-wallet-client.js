@@ -2719,6 +2719,7 @@ var Constants = {};
 Constants.SCRIPT_TYPES = {
   P2SH: 'P2SH',
   P2PKH: 'P2PKH',
+  P2WPKH: 'P2WPKH',
 };
 Constants.DERIVATION_STRATEGIES = {
   BIP44: 'BIP44',
@@ -2899,6 +2900,11 @@ Utils.deriveAddress = function(scriptType, publicKeyRing, path, m, network) {
       $.checkState(_.isArray(publicKeys) && publicKeys.length == 1);
       bitcoreAddress = Digibyte.Address.fromPublicKey(publicKeys[0], network);
       break;
+    case Constants.SCRIPT_TYPES.P2WPKH:
+      $.checkState(_.isArray(publicKeys) && publicKeys.length == 1);
+      var pubkey = new Digibyte.PublicKey(publicKeys[0], network);
+      bitcoreAddress = pubkey.toAddress();
+      break;      
   }
 
   return {
@@ -2970,6 +2976,9 @@ Utils.buildTx = function(txp) {
       });
       break;
     case Constants.SCRIPT_TYPES.P2PKH:
+      t.from(txp.inputs);
+      break;
+    case Constants.SCRIPT_TYPES.P2WPKH:
       t.from(txp.inputs);
       break;
   }
@@ -3341,7 +3350,7 @@ Credentials.prototype.addWalletInfo = function(walletId, walletName, m, n, copay
     this.copayerName = copayerName;
 
   if (this.derivationStrategy == 'BIP44' && n == 1)
-    this.addressType = Constants.SCRIPT_TYPES.P2PKH;
+    this.addressType = Constants.SCRIPT_TYPES.P2WPKH;
   else
     this.addressType = Constants.SCRIPT_TYPES.P2SH;
 
