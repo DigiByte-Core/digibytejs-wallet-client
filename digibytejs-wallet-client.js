@@ -2720,6 +2720,7 @@ Constants.SCRIPT_TYPES = {
   P2SH: 'P2SH',
   P2PKH: 'P2PKH',
   P2WPKH: 'P2WPKH',
+  P2WSH: 'P2WSH'
 };
 Constants.DERIVATION_STRATEGIES = {
   BIP44: 'BIP44',
@@ -2894,7 +2895,10 @@ Utils.deriveAddress = function(scriptType, publicKeyRing, path, m, network) {
   var bitcoreAddress;
   switch (scriptType) {
     case Constants.SCRIPT_TYPES.P2SH:
-      bitcoreAddress = Digibyte.Address.createMultisig(publicKeys, m, network);
+      bitcoreAddress = Digibyte.Address.createMultisig(publicKeys, m, network, true);
+      break;
+    case Constants.SCRIPT_TYPES.P2WSH:
+      bitcoreAddress = Digibyte.Address.createMultisig(publicKeys, m, Digibyte.Networks.get(network));
       break;
     case Constants.SCRIPT_TYPES.P2PKH:
       $.checkState(_.isArray(publicKeys) && publicKeys.length == 1);
@@ -2971,6 +2975,11 @@ Utils.buildTx = function(txp) {
 
   switch (txp.addressType) {
     case Constants.SCRIPT_TYPES.P2SH:
+      _.each(txp.inputs, function(i) {
+        t.from(i, i.publicKeys, txp.requiredSignatures);
+      });
+      break;
+    case Constants.SCRIPT_TYPES.P2WSH:
       _.each(txp.inputs, function(i) {
         t.from(i, i.publicKeys, txp.requiredSignatures);
       });
@@ -3294,7 +3303,7 @@ Credentials.fromObj = function(obj) {
   });
 
   x.derivationStrategy = x.derivationStrategy || Constants.DERIVATION_STRATEGIES.BIP45;
-  x.addressType = x.addressType || Constants.SCRIPT_TYPES.P2SH;
+  x.addressType = x.addressType || Constants.SCRIPT_TYPES.P2WSH;
   x.account = x.account || 0;
 
   $.checkState(x.xPrivKey || x.xPubKey || x.xPrivKeyEncrypted, "invalid input");
@@ -3352,7 +3361,7 @@ Credentials.prototype.addWalletInfo = function(walletId, walletName, m, n, copay
   if (this.derivationStrategy == 'BIP44' && n == 1)
     this.addressType = Constants.SCRIPT_TYPES.P2WPKH;
   else
-    this.addressType = Constants.SCRIPT_TYPES.P2SH;
+    this.addressType = Constants.SCRIPT_TYPES.P2WSH;
 
   // Use m/48' for multisig hardware wallets
   if (!this.xPrivKey && this.externalSource && n > 1) {
@@ -4013,7 +4022,8 @@ PayPro._getPayProRefundOutputs = function(addrStr, amount) {
   amount = amount.toString(10);
 
   var output = new BitcorePayPro.Output();
-  var addr = new bitcore.Address(addrStr);
+  console.log(addrStr)
+  var addr = new Digibyte.Address(addrStr);
 
   var s;
   if (addr.isPayToPublicKeyHash()) {
@@ -4127,7 +4137,7 @@ function Verifier(opts) {};
 Verifier.checkAddress = function(credentials, address) {
   $.checkState(credentials.isComplete());
 
-  var local = Utils.deriveAddress(address.type || credentials.addressType, credentials.publicKeyRing, address.path, credentials.m, credentials.network);
+  var local = Utils.deriveAddress(address.type || credentials.addressType, credentials.publicKeyRing, address.path, credentials.m, Digibyte.Networks.get(credentials.network));
   return (local.address == address.address &&
     _.difference(local.publicKeys, address.publicKeys).length === 0);
 };
@@ -25635,7 +25645,7 @@ var PublicKey = require('./publickey');
  * @returns {Address} A new valid and frozen instance of an Address
  * @constructor
  */
-function Address(data, network, type) {
+function Address(data, network, type, legacy) {
   /* jshint maxcomplexity: 12 */
   /* jshint maxstatements: 20 */
 
@@ -25643,7 +25653,7 @@ function Address(data, network, type) {
     return new Address(data, network, type);
   }
   if (_.isArray(data) && _.isNumber(network)) {
-    return Address.createMultisig(data, network, type);
+    return Address.createMultisig(data, network, type, legacy);
   }
   if (data instanceof Address) {
     // Immutable instance
@@ -25770,7 +25780,7 @@ Address._classifyFromVersion = function(buffer, network, prefix) {
     } else {
       throw new TypeError('Invalid buffer length for segwit address')
     }
-    version.network = network;
+    version.network = Networks.get(prefix, 'prefix');;
   } else {
     if (pubkeyhashNetwork) {
       version.network = pubkeyhashNetwork;
@@ -25805,9 +25815,17 @@ Address._transformBuffer = function(buffer, network, type, prefix) {
     throw new TypeError('Address buffer is incorrect length.');
   }
 
-  network = Networks.get(network);
+  var networkObj = Networks.get(network);
   var bufferVersion = Address._classifyFromVersion(buffer, network, prefix);
-  if (!bufferVersion.network || (network && network !== bufferVersion.network)) {
+
+  if (network && !networkObj) {
+    throw new TypeError('Unknown network');
+  }
+
+  if (!bufferVersion.network || (networkObj && networkObj !== bufferVersion.network)) {
+    if (buffer.toString('hex') === 'bb15e665f7816b6146c7238ce6ea8a511f50b78d') {
+      console.log(bufferVersion, networkObj, 'lsosl')
+    }
     throw new TypeError('Address has mismatched network type.');
   }
 
@@ -25880,7 +25898,7 @@ Address.createMultisig = function(publicKeys, threshold, network, legacy) {
     info.network = network;
     return new Address(Bech32Check.encode(Buffer.from(words), network.prefix), network);
   }
-  return Address.payingTo(Script.buildWitnessMultisigOutFromScript(redeemScript), network);
+  return Address.payingTo(redeemScript, network);
 };
 
 /**
@@ -25899,19 +25917,20 @@ Address._transformString = function(data, network, type) {
   if (data.length < 34){
     throw new Error('Invalid Address string provided');
   }
-
   data = data.trim();
   try {
-    network = network || Networks.defaultNetwork
     var result = Bech32.decode(data);
     var version = result.shift();
-    var data = Bech32.fromWords(result);
-    var info = Address._transformBuffer(Buffer.from(data), network, type, network.prefix);
+    var buf = Bech32.fromWords(result);
+    var info = Address._transformBuffer(Buffer.from(buf), Networks.get(network || 'livenet'), type, Networks.get(network || 'livenet').prefix);
     return info;
   } catch (e) {
-      if (type === Address.PayToWitnessPublicKeyHash || type === Address.PayToWitnessScriptHash) {
-        throw e;
-      }
+    if(data === 'dgb1qhv27ve0hs94kz3k8ywxwd6522y04pdud3lq74k'){
+      console.log(Buffer.from(buf).toString('hex'))
+    }
+    if (type === Address.PayToWitnessPublicKeyHash || type === Address.PayToWitnessScriptHash) {
+      return e;
+    }
   }
   var addressBuffer = Base58Check.decode(data);
   var info = Address._transformBuffer(addressBuffer, network, type);
@@ -25953,7 +25972,7 @@ Address.fromPublicKeyHash = function(hash, network) {
 Address.fromScriptHash = function(hash, network) {
   $.checkArgument(hash, 'hash parameter is required');
   var info = Address._transformHash(hash);
-  return new Address(info.hashBuffer, network, Address.PayToWitnessScriptHash);
+  return new Address(info.hashBuffer, network, Address.PayToScriptHash);
 };
 
 /**
@@ -28882,7 +28901,6 @@ ECDSA.prototype.calci = function() {
     try {
       Qprime = this.toPublicKey();
     } catch (e) {
-      console.error(e);
       continue;
     }
 
@@ -32140,6 +32158,7 @@ function addNetwork(data) {
   JSUtil.defineImmutable(network, {
     name: data.name,
     alias: data.alias,
+    prefix: data.prefix,
     pubkeyhash: data.pubkeyhash,
     privatekey: data.privatekey,
     privatekeyOld: data.privatekeyOld,
@@ -35907,6 +35926,8 @@ Script.fromAddress = function(address) {
     return Script.buildPublicKeyHashOut(address);
   } else if (address.isPayToWitnessPublicKeyHash()) {
     return Script.buildWitnessV0Out(address);
+  } else if (address.isPayToWitnessScriptHash(address)){
+    return Script.buildPublicKeyHashOut(address);
   }
   throw new errors.Script.UnrecognizedAddress(address);
 };
@@ -40187,10 +40208,10 @@ module.exports = basex(ALPHABET)
 arguments[4][36][0].apply(exports,arguments)
 },{"dup":36}],164:[function(require,module,exports){
 module.exports={
-  "_from": "digibyte@^0.15.3",
-  "_id": "digibyte@0.15.3",
+  "_from": "digibyte@^0.15.4",
+  "_id": "digibyte@0.15.4",
   "_inBundle": false,
-  "_integrity": "sha512-0xLnXwJTLFnEboE3/o/7sY26nogiBdQS+CGuN2UzEeD9qT54x/wCUeRE3Lwsne0unTeLQ3B6t53YFFYK3ua8JQ==",
+  "_integrity": "sha512-6bvv11rRPJg2tUB+iRMLAmhgooyWsL9SV4/25bwxiiDcU9tKeFZaq0Wbv4ufV1u6Bi5StYuAwpEpJBX1rsxGsg==",
   "_location": "/digibyte",
   "_phantomChildren": {
     "base-x": "3.0.5"
@@ -40198,12 +40219,12 @@ module.exports={
   "_requested": {
     "type": "range",
     "registry": true,
-    "raw": "digibyte@^0.15.3",
+    "raw": "digibyte@^0.15.4",
     "name": "digibyte",
     "escapedName": "digibyte",
-    "rawSpec": "^0.15.3",
+    "rawSpec": "^0.15.4",
     "saveSpec": null,
-    "fetchSpec": "^0.15.3"
+    "fetchSpec": "^0.15.4"
   },
   "_requiredBy": [
     "/",
@@ -40211,9 +40232,9 @@ module.exports={
     "/digibytejs-payment-protocol",
     "/digibytejs-wallet-service"
   ],
-  "_resolved": "https://registry.npmjs.org/digibyte/-/digibyte-0.15.3.tgz",
-  "_shasum": "bb270778daffeccc35e94adacf5c1e574e412cc7",
-  "_spec": "digibyte@^0.15.3",
+  "_resolved": "https://registry.npmjs.org/digibyte/-/digibyte-0.15.4.tgz",
+  "_shasum": "aed97461ae106efae5285fd5f1ca37602e6b6665",
+  "_spec": "digibyte@^0.15.4",
   "_where": "/mnt/g/developer/digibyte/digiassets/digibytejs-wallet-client",
   "author": {
     "name": "DigiByte",
@@ -40321,7 +40342,7 @@ module.exports={
     "lint": "gulp lint",
     "test": "gulp test"
   },
-  "version": "0.15.3"
+  "version": "0.15.4"
 }
 
 },{}],165:[function(require,module,exports){
@@ -94309,7 +94330,7 @@ module.exports={
   "dependencies": {
     "async": "^0.9.0",
     "bip38": "^1.3.0",
-    "digibyte": "^0.15.3",
+    "digibyte": "^0.15.4",
     "digibytejs-mnemonic": "1.5.2",
     "digibytejs-payment-protocol": "1.7.2",
     "json-stable-stringify": "^1.0.0",

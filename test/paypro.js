@@ -70,7 +70,7 @@ describe('paypro', function() {
       xhr: xhr,
       env: 'browser',
     }, function(err, res) {
-      headers['Accept'].should.equal('application/bitcoin-paymentrequest');
+      headers['Accept'].should.equal('application/digibyte-paymentrequest');
       should.not.exist(err);
       res.should.deep.equal(TestData.payProData);
       done();
@@ -85,7 +85,7 @@ describe('paypro', function() {
       xhr: xhr,
       env: 'browser',
     }, function(err, res) {
-      headers['Accept'].should.equal('application/bitcoin-paymentrequest');
+      headers['Accept'].should.equal('application/digibyte-paymentrequest');
       should.exist(err);
       done();
     });
@@ -193,7 +193,7 @@ describe('paypro', function() {
     var opts = {
       merchant_data: data.merchant_data,
       rawTx: '12ab1234',
-      refundAddr: 'mwRGmB4NE3bG4EbXJKTHf8uvodoUtMCRhZ',
+      refundAddr: 'spYJyELjetk8zXFTXzuFx17ACZQn5DZv1v',
       amountSat: 100,
       url: 'http://an.url.com/paypro',
       xhr: xhr,
@@ -215,7 +215,7 @@ describe('paypro', function() {
     var opts = {
       merchant_data: data.merchant_data,
       rawTx: '12ab1234',
-      refundAddr: 'mwRGmB4NE3bG4EbXJKTHf8uvodoUtMCRhZ',
+      refundAddr: 'spYJyELjetk8zXFTXzuFx17ACZQn5DZv1v',
       amountSat: 100,
       httpNode: httpNode,
       url: 'http://an.url.com/paypro',

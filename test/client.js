@@ -85,8 +85,14 @@ helpers.generateUtxos = function(scriptType, publicKeyRing, path, requiredSignat
       case Constants.SCRIPT_TYPES.P2SH:
         scriptPubKey = Digibyte.Script.buildMultisigOut(address.publicKeys, requiredSignatures).toScriptHashOut();
         break;
+      case Constants.SCRIPT_TYPES.P2WSH:
+        scriptPubKey = Digibyte.Script.buildMultisigOut(address.publicKeys, requiredSignatures).toScriptHashOut();
+        break;
       case Constants.SCRIPT_TYPES.P2PKH:
         scriptPubKey = Digibyte.Script.buildPublicKeyHashOut(address.address);
+        break;
+      case Constants.SCRIPT_TYPES.P2WPKH:
+        scriptPubKey = Digibyte.Script.buildWitnessPublicKeyHashOut(address.address);
         break;
     }
     should.exist(scriptPubKey);
@@ -1564,7 +1570,7 @@ describe('client API', function() {
         10: 18000,
       });
       clients[0].credentials = {};
-      clients[0].getFeeLevels('dgb', 'livenet', function(err, levels) {
+      clients[0].getFeeLevels('livenet', function(err, levels) {
         should.not.exist(err);
         should.exist(levels);
         _.difference(['priority', 'normal', 'economy'], _.map(levels, 'level')).should.be.empty;
@@ -2468,7 +2474,7 @@ describe('client API', function() {
 
     describe('DGB', function(done) {
       beforeEach(function(done) {
-        setup(2, 3, 'dgb', 'testnet', done);
+        setup(2, 3, 'testnet', done);
       });
 
       it('Should sign proposal', function(done) {
@@ -5130,13 +5136,11 @@ describe('client API', function() {
     });
   });
 
-  var addrMap = {
-    dgb: ['1PuKMvRFfwbLXyEPXZzkGi111gMUCs6uE3','1GG3JQikGC7wxstyavUBDoCJ66bWLLENZC']
-  };
-  _.each(['dgb'], function(coin) {
-    var addr= addrMap[coin];
+  var addrMap = ['1PuKMvRFfwbLXyEPXZzkGi111gMUCs6uE3','1GG3JQikGC7wxstyavUBDoCJ66bWLLENZC']
 
-    describe('Sweep paper wallet ' + coin, function() {
+  _.each(addrMap, function(addr) {
+
+    describe('Sweep paper wallet', function() {
       it.skip('should decrypt bip38 encrypted private key', function(done) {
         this.timeout(60000);
         clients[0].decryptBIP38PrivateKey('6PfRh9ZnWtiHrGoPPSzXe6iafTXc6FSXDhSBuDvvDmGd1kpX2Gvy1CfTcA', 'passphrase', {}, function(err, result) {

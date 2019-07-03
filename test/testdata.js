@@ -83,7 +83,7 @@ var payProData = {
   expires: 1427291383,
   memo: 'Payment request for BitPay invoice CibEJJtG1t9H77KmM61E2t for merchant testCopay',
   time: 1427290483,
-  toAddress: 'mjfjcbuYwBUdEyq2m7AezjCAR4etUBqyiE',
+  toAddress: 'spYJyELjetk8zXFTXzuFx17ACZQn5DZv1v',
   amount: 404500,
   network: 'testnet',
   domain: 'an.url.com',
