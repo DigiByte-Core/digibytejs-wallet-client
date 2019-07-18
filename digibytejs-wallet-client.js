@@ -3303,7 +3303,7 @@ Credentials.fromObj = function(obj) {
   });
 
   x.derivationStrategy = x.derivationStrategy || Constants.DERIVATION_STRATEGIES.BIP45;
-  x.addressType = x.addressType || Constants.SCRIPT_TYPES.P2WSH;
+  x.addressType = x.addressType || Constants.SCRIPT_TYPES.P2SH;
   x.account = x.account || 0;
 
   $.checkState(x.xPrivKey || x.xPubKey || x.xPrivKeyEncrypted, "invalid input");
@@ -3359,9 +3359,9 @@ Credentials.prototype.addWalletInfo = function(walletId, walletName, m, n, copay
     this.copayerName = copayerName;
 
   if (this.derivationStrategy == 'BIP44' && n == 1)
-    this.addressType = Constants.SCRIPT_TYPES.P2WPKH;
+    this.addressType = Constants.SCRIPT_TYPES.P2PKH;
   else
-    this.addressType = Constants.SCRIPT_TYPES.P2WSH;
+    this.addressType = Constants.SCRIPT_TYPES.P2SH;
 
   // Use m/48' for multisig hardware wallets
   if (!this.xPrivKey && this.externalSource && n > 1) {
@@ -94406,11 +94406,11 @@ module.exports={
   "engine": "node >= 8.0.0",
   "main": "index.js",
   "repository": {
-    "url": "git@github.com:digibyte/digibytejs-wallet-client.git",
+    "url": "git@github.com:digibyte-core/digibytejs-wallet-client.git",
     "type": "git"
   },
   "bugs": {
-    "url": "https://github.com/digibyte/digibytejs-wallet-client/issues"
+    "url": "https://github.com/digibyte-core/digibytejs-wallet-client/issues"
   },
   "dependencies": {
     "async": "^0.9.0",

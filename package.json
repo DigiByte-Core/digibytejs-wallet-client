@@ -16,11 +16,11 @@
   "engine": "node >= 8.0.0",
   "main": "index.js",
   "repository": {
-    "url": "git@github.com:digibyte/digibytejs-wallet-client.git",
+    "url": "git@github.com:digibyte-core/digibytejs-wallet-client.git",
     "type": "git"
   },
   "bugs": {
-    "url": "https://github.com/digibyte/digibytejs-wallet-client/issues"
+    "url": "https://github.com/digibyte-core/digibytejs-wallet-client/issues"
   },
   "dependencies": {
     "async": "^0.9.0",
