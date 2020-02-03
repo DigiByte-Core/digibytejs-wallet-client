@@ -2899,6 +2899,7 @@ Utils.deriveAddress = function(scriptType, publicKeyRing, path, m, network) {
       break;
     case Constants.SCRIPT_TYPES.P2WSH:
       bitcoreAddress = Digibyte.Address.createMultisig(publicKeys, m, Digibyte.Networks.get(network));
+      bitcoreAddress.type = 'PayToWitnessPublicKeyHash';
       break;
     case Constants.SCRIPT_TYPES.P2PKH:
       $.checkState(_.isArray(publicKeys) && publicKeys.length == 1);
@@ -2907,7 +2908,7 @@ Utils.deriveAddress = function(scriptType, publicKeyRing, path, m, network) {
     case Constants.SCRIPT_TYPES.P2WPKH:
       $.checkState(_.isArray(publicKeys) && publicKeys.length == 1);
       var pubkey = new Digibyte.PublicKey(publicKeys[0], network);
-      bitcoreAddress = pubkey.toAddress();
+      bitcoreAddress.type = 'PayToWitnessScriptHash';
       break;      
   }
 
@@ -3303,7 +3304,7 @@ Credentials.fromObj = function(obj) {
   });
 
   x.derivationStrategy = x.derivationStrategy || Constants.DERIVATION_STRATEGIES.BIP45;
-  x.addressType = x.addressType || Constants.SCRIPT_TYPES.P2SH;
+  x.addressType = x.addressType || Constants.SCRIPT_TYPES.P2WSH;
   x.account = x.account || 0;
 
   $.checkState(x.xPrivKey || x.xPubKey || x.xPrivKeyEncrypted, "invalid input");
@@ -3359,9 +3360,9 @@ Credentials.prototype.addWalletInfo = function(walletId, walletName, m, n, copay
     this.copayerName = copayerName;
 
   if (this.derivationStrategy == 'BIP44' && n == 1)
-    this.addressType = Constants.SCRIPT_TYPES.P2PKH;
+    this.addressType = Constants.SCRIPT_TYPES.P2WPKH;
   else
-    this.addressType = Constants.SCRIPT_TYPES.P2SH;
+    this.addressType = Constants.SCRIPT_TYPES.P2WSH;
 
   // Use m/48' for multisig hardware wallets
   if (!this.xPrivKey && this.externalSource && n > 1) {
@@ -10089,7 +10090,8 @@ function toByteArray (b64) {
     ? validLen - 4
     : validLen
 
-  for (var i = 0; i < len; i += 4) {
+  var i
+  for (i = 0; i < len; i += 4) {
     tmp =
       (revLookup[b64.charCodeAt(i)] << 18) |
       (revLookup[b64.charCodeAt(i + 1)] << 12) |
@@ -11789,36 +11791,39 @@ require('./convert')
 module.exports = BigInteger
 },{"./bigi":42,"./convert":43}],45:[function(require,module,exports){
 module.exports={
-  "_from": "bigi@^1.2.0",
+  "_args": [
+    [
+      "bigi@1.4.2",
+      "F:\\Work\\DigiByte\\digibytejs-wallet-client"
+    ]
+  ],
+  "_from": "bigi@1.4.2",
   "_id": "bigi@1.4.2",
   "_inBundle": false,
   "_integrity": "sha1-nGZalfiLiwj8Bc/XMfVhhZ1yWCU=",
   "_location": "/bigi",
   "_phantomChildren": {},
   "_requested": {
-    "type": "range",
+    "type": "version",
     "registry": true,
-    "raw": "bigi@^1.2.0",
+    "raw": "bigi@1.4.2",
     "name": "bigi",
     "escapedName": "bigi",
-    "rawSpec": "^1.2.0",
+    "rawSpec": "1.4.2",
     "saveSpec": null,
-    "fetchSpec": "^1.2.0"
+    "fetchSpec": "1.4.2"
   },
   "_requiredBy": [
     "/bip38",
     "/ecurve"
   ],
   "_resolved": "https://registry.npmjs.org/bigi/-/bigi-1.4.2.tgz",
-  "_shasum": "9c665a95f88b8b08fc05cfd731f561859d725825",
-  "_spec": "bigi@^1.2.0",
-  "_where": "/mnt/g/developer/digibyte/digiassets/digibytejs-wallet-client/node_modules/bip38",
+  "_spec": "1.4.2",
+  "_where": "F:\\Work\\DigiByte\\digibytejs-wallet-client",
   "bugs": {
     "url": "https://github.com/cryptocoinjs/bigi/issues"
   },
-  "bundleDependencies": false,
   "dependencies": {},
-  "deprecated": false,
   "description": "Big integers.",
   "devDependencies": {
     "coveralls": "^2.11.2",
@@ -17777,7 +17782,7 @@ module.exports = function xor (a, b) {
 /*!
  * The buffer module from node.js, for the browser.
  *
- * @author   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
+ * @author   Feross Aboukhadijeh <http://feross.org>
  * @license  MIT
  */
 /* eslint-disable no-proto */
@@ -24679,9 +24684,8 @@ Cipher.prototype._finalDecrypt = function _finalDecrypt() {
 var assert = require('minimalistic-assert');
 var inherits = require('inherits');
 
-var des = require('../des');
-var utils = des.utils;
-var Cipher = des.Cipher;
+var utils = require('./utils');
+var Cipher = require('./cipher');
 
 function DESState() {
   this.tmp = new Array(2);
@@ -24818,15 +24822,14 @@ DES.prototype._decrypt = function _decrypt(state, lStart, rStart, out, off) {
   utils.rip(l, r, out, off);
 };
 
-},{"../des":94,"inherits":220,"minimalistic-assert":232}],98:[function(require,module,exports){
+},{"./cipher":96,"./utils":99,"inherits":220,"minimalistic-assert":232}],98:[function(require,module,exports){
 'use strict';
 
 var assert = require('minimalistic-assert');
 var inherits = require('inherits');
 
-var des = require('../des');
-var Cipher = des.Cipher;
-var DES = des.DES;
+var Cipher = require('./cipher');
+var DES = require('./des');
 
 function EDEState(type, key) {
   assert.equal(key.length, 24, 'Invalid key length');
@@ -24875,7 +24878,7 @@ EDE.prototype._update = function _update(inp, inOff, out, outOff) {
 EDE.prototype._pad = DES.prototype._pad;
 EDE.prototype._unpad = DES.prototype._unpad;
 
-},{"../des":94,"inherits":220,"minimalistic-assert":232}],99:[function(require,module,exports){
+},{"./cipher":96,"./des":97,"inherits":220,"minimalistic-assert":232}],99:[function(require,module,exports){
 'use strict';
 
 exports.readUInt32BE = function readUInt32BE(bytes, off) {
@@ -25643,7 +25646,6 @@ function Address(data, network, type, legacy) {
     && type !== Address.PayToWitnessScriptHash)) {
     throw new TypeError('Third argument must be "pubkeyhash", "scripthash", "witnesspubkeyhash", or "witnessscripthash".');
   }
-
   var info = this._classifyArguments(data, network, type);
 
   // set defaults if not set
@@ -25694,6 +25696,8 @@ Address.PayToScriptHash = 'scripthash';
 Address.PayToWitnessPublicKeyHash = 'paytowitnesspublickeyhash';
 /** @static */
 Address.PayToWitnessScriptHash = 'paytowitnessscripthash';
+/** @static */
+Address.PayToPublicKey = 'publickey';
 
 /**
  * @param {Buffer} hash - An instance of a hash Buffer
@@ -25793,9 +25797,6 @@ Address._transformBuffer = function(buffer, network, type, prefix) {
   }
 
   if (!bufferVersion.network || (networkObj && networkObj !== bufferVersion.network)) {
-    if (buffer.toString('hex') === 'bb15e665f7816b6146c7238ce6ea8a511f50b78d') {
-      console.log(bufferVersion, networkObj, 'lsosl')
-    }
     throw new TypeError('Address has mismatched network type.');
   }
 
@@ -25816,13 +25817,13 @@ Address._transformBuffer = function(buffer, network, type, prefix) {
  * @returns {Object} An object with keys: hashBuffer, type
  * @private
  */
-Address._transformPublicKey = function(pubkey) {
+Address._transformPublicKey = function(pubkey, type) {
   var info = {};
   if (!(pubkey instanceof PublicKey)) {
     throw new TypeError('Address must be an instance of PublicKey.');
   }
   info.hashBuffer = Hash.sha256ripemd160(pubkey.toBuffer());
-  info.type = Address.PayToPublicKeyHash;
+  info.type = type || Address.PayToPublicKeyHash;
   return info;
 };
 
@@ -25912,8 +25913,8 @@ Address._transformString = function(data, network, type) {
  * @param {String|Network} network - either a Network instance, 'livenet', or 'testnet'
  * @returns {Address} A new valid and frozen instance of an Address
  */
-Address.fromPublicKey = function(data, network) {
-  var info = Address._transformPublicKey(data);
+Address.fromPublicKey = function(data, network, type) {
+  var info = Address._transformPublicKey(data, type);
   network = network || Networks.defaultNetwork;
   return new Address(info.hashBuffer, network, info.type);
 };
@@ -26117,6 +26118,19 @@ Address.toBech32Address = function(data, network) {
     network: network || this.network
   });
 };
+
+/**
+ * ill return a the string representation of the digiasset address
+ *
+ * @param {PublicKey} data
+ * @param {String|Network} network - either a Network instance, 'livenet', or 'testnet'
+ * @returns {Address} A new valid and frozen instance of an Address
+ */
+Address.prototype.toDigiAssetString = function(data, network) {
+  var words = Bech32.toWords(this.hashBuffer);
+  words.unshift(0);
+  return Bech32Check.encode(Buffer.from(words), this.network.assetPrefix);
+}
 
 /**
  * @returns {Object} A plain object with the address information
@@ -27762,7 +27776,15 @@ var BufferReader = require('../encoding/bufferreader');
 var BufferWriter = require('../encoding/bufferwriter');
 var Hash = require('../crypto/hash');
 var Transaction = require('../transaction');
+var Unit = require('../unit');
 var $ = require('../util/preconditions');
+
+var nDiffChangeTarget = 67200;
+var patchBlockRewardDuration = 10080;
+var patchBlockRewardDuration2 = 80160
+var alwaysUpdateDiffChangeTarget = 400000;
+var workComputationChangeTarget = 1430000 
+var nSubsidy = Unit.fromSatoshis(1).toDGB();
 
 /**
  * Instantiate a Block from a Buffer, JSON object, or Object with
@@ -28032,10 +28054,56 @@ Block.Values = {
   NULL_HASH: new Buffer('0000000000000000000000000000000000000000000000000000000000000000', 'hex')
 };
 
+Block.GetDGBSubsidy = function GetDGBSubsidy(height) {
+  var qSubsidy;
+  if (height < alwaysUpdateDiffChangeTarget) {
+    qSubsidy = Unit.fromDGB(8000).toSatoshis();
+    var blocks = height - nDiffChangeTarget;
+    var weeks = (blocks / patchBlockRewardDuration);
+    for (var i = 0; i < weeks; i++){
+      qSubsidy -= (qSubsidy/200);
+    }
+  } else if(height < workComputationChangeTarget){
+    qSubsidy = Unit.fromDGB(2459).toSatoshis();
+    var blocks = height - alwaysUpdateDiffChangeTarget;
+    var weeks = Math.floor((blocks / patchBlockRewardDuration2) + 1);
+    for (var i = 0; i < weeks; i++) {
+      qSubsidy -= (qSubsidy/100)
+    }
+  } else {
+    qSubsidy  = Unit.fromDGB(2157 / 2).toSatoshis();
+    var blocks =  height - workComputationChangeTarget;
+    var months = Math.floor(blocks * 15 / (3600*24*365/12));
+    for (var i = 0; i < months; i++) {
+      qSubsidy = qSubsidy * 98884;
+      qSubsidy = qSubsidy / 100000;
+    }
+  }
+  return qSubsidy;
+};
+   
+Block.getBlockValue = function getBlockValue(height) {
+  if (height < nDiffChangeTarget) {
+    nSubsidy = Unit.fromDGB(8000).toSatoshis();         
+    if(height < 1440) {
+      nSubsidy = Unit.fromDGB(72000).toSatoshis();
+    } else if(height < 5760) {
+      nSubsidy = Unit.fromDGB(16000).toSatoshis();
+    }
+  } else {
+    nSubsidy = Block.GetDGBSubsidy(height);
+  }
+                 
+  if(nSubsidy < Unit.fromDGB(1).toSatoshis()){
+    nSubsidy = Unit.fromDGB(1).toSatoshis();
+  }
+  return Unit.fromSatoshis(nSubsidy).toDGB();
+};
+
 module.exports = Block;
 
 }).call(this,require("buffer").Buffer)
-},{"../crypto/bn":117,"../crypto/hash":119,"../encoding/bufferreader":127,"../encoding/bufferwriter":128,"../transaction":141,"../util/buffer":159,"../util/preconditions":161,"./blockheader":114,"buffer":80,"lodash":228}],114:[function(require,module,exports){
+},{"../crypto/bn":117,"../crypto/hash":119,"../encoding/bufferreader":127,"../encoding/bufferwriter":128,"../transaction":141,"../unit":156,"../util/buffer":159,"../util/preconditions":161,"./blockheader":114,"buffer":80,"lodash":228}],114:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -32126,6 +32194,7 @@ function addNetwork(data) {
   JSUtil.defineImmutable(network, {
     name: data.name,
     alias: data.alias,
+    assetPrefix: data.assetPrefix,
     prefix: data.prefix,
     pubkeyhash: data.pubkeyhash,
     privatekey: data.privatekey,
@@ -32194,6 +32263,7 @@ function removeNetwork(network) {
 addNetwork({
   name: 'livenet',
   alias: 'mainnet',
+  assetPrefix: 'dap',
   prefix: 'dgb',
   pubkeyhash: 0x1e,
   privatekey: 0x80,
@@ -35193,15 +35263,9 @@ Script.prototype.isPublicKeyHashIn = function() {
  * @returns {boolean} if this is a pay to public key hash input script
  */
 Script.prototype.isWitnessPublicKeyHashIn = function() {
-  console.log(this)
   if (this.chunks.length === 2) {
     var signatureBuf = this.chunks[0].buf;
     var pubkeyBuf = this.chunks[1].buf;
-    console.log(signatureBuf &&
-      signatureBuf.length &&
-      signatureBuf[0] === 0x30 &&
-      pubkeyBuf &&
-      pubkeyBuf.length);
     if (signatureBuf &&
         signatureBuf.length &&
         signatureBuf[0] === 0x30 &&
@@ -35227,7 +35291,7 @@ Script.prototype.getPublicKey = function() {
 };
 
 Script.prototype.getPublicKeyHash = function() {
-  $.checkState(this.isWitnessPublicKeyHashOut(), 'Can\'t retrieve PublicKeyHash from a non-PKH output');
+  $.checkState(this.isPublicKeyHashOut(), 'Can\'t retrieve PublicKeyHash from a non-PKH output');
   return this.chunks[2].buf;
 };
 
@@ -35414,7 +35478,7 @@ Script.prototype.isDataOut = function() {
  * @returns {Buffer}
  */
 Script.prototype.getData = function() {
-  if (this.isDataOut() || this.isScriptHashOut()) {
+  if (this.isDataOut() || this.isScriptHashOut() || this.isWitnessScriptHashOut() || this.isWitnessPublicKeyHashOut()) {
     if (_.isUndefined(this.chunks[1])) {
       return Buffer.alloc(0);
     } else {
@@ -35423,6 +35487,8 @@ Script.prototype.getData = function() {
   }
   if (this.isPublicKeyHashOut()) {
     return Buffer.from(this.chunks[2].buf);
+  } else if (this.isPublicKeyOut()) {
+    return Buffer.from(this.chunks[0].buf);
   }
   throw new Error('Unrecognized script type to get data from');
 };
@@ -36001,6 +36067,9 @@ Script.prototype._getInputAddressInfo = function() {
  * @return {Address|boolean} the associated address for this script if possible, or false
  */
 Script.prototype.toAddress = function(network) {
+  if (this.isPublicKeyOut()){
+    return new PublicKey(this.chunks[0].buf).toLegacyAddress();
+  }
   var info = this.getAddressInfo();
   if (!info) {
     return false;
@@ -40220,34 +40289,34 @@ module.exports = basex(ALPHABET)
 arguments[4][36][0].apply(exports,arguments)
 },{"dup":36}],164:[function(require,module,exports){
 module.exports={
-  "_from": "digibyte@^0.15.5",
-  "_id": "digibyte@0.15.5",
+  "_args": [
+    [
+      "git://github.com/digicontributer/digibyte-js.git#40858dc83c5b8b3579ded20a61c88930c22b00d2",
+      "F:\\Work\\DigiByte\\digibytejs-wallet-client"
+    ]
+  ],
+  "_from": "git://github.com/digicontributer/digibyte-js.git#40858dc83c5b8b3579ded20a61c88930c22b00d2",
+  "_id": "digibyte@git://github.com/digicontributer/digibyte-js.git#40858dc83c5b8b3579ded20a61c88930c22b00d2",
   "_inBundle": false,
-  "_integrity": "sha512-QKGdntsMhGCzVimSYxMYrhLfk3ghzJlbuKZ0HwyB0ciK1GijLCJs33F8EImA8s+rmb9ZlOk+KMyli0NCoUDapw==",
+  "_integrity": "",
   "_location": "/digibyte",
   "_phantomChildren": {
-    "base-x": "3.0.6"
+    "base-x": "3.0.7"
   },
   "_requested": {
-    "type": "range",
-    "registry": true,
-    "raw": "digibyte@^0.15.5",
-    "name": "digibyte",
-    "escapedName": "digibyte",
-    "rawSpec": "^0.15.5",
-    "saveSpec": null,
-    "fetchSpec": "^0.15.5"
+    "type": "git",
+    "raw": "git://github.com/digicontributer/digibyte-js.git#40858dc83c5b8b3579ded20a61c88930c22b00d2",
+    "rawSpec": "git://github.com/digicontributer/digibyte-js.git#40858dc83c5b8b3579ded20a61c88930c22b00d2",
+    "saveSpec": "git://github.com/digicontributer/digibyte-js.git#40858dc83c5b8b3579ded20a61c88930c22b00d2",
+    "fetchSpec": "git://github.com/digicontributer/digibyte-js.git",
+    "gitCommittish": "40858dc83c5b8b3579ded20a61c88930c22b00d2"
   },
   "_requiredBy": [
-    "/",
-    "/digibytejs-mnemonic",
-    "/digibytejs-payment-protocol",
-    "/digibytejs-wallet-service"
+    "/"
   ],
-  "_resolved": "https://registry.npmjs.org/digibyte/-/digibyte-0.15.5.tgz",
-  "_shasum": "c3a99e089b78e028588b25f2d1ac2ac60a2462f2",
-  "_spec": "digibyte@^0.15.5",
-  "_where": "/mnt/g/developer/digibyte/digiassets/digibytejs-wallet-client",
+  "_resolved": "git://github.com/digicontributer/digibyte-js.git#40858dc83c5b8b3579ded20a61c88930c22b00d2",
+  "_spec": "git://github.com/digicontributer/digibyte-js.git#40858dc83c5b8b3579ded20a61c88930c22b00d2",
+  "_where": "F:\\Work\\DigiByte\\digibytejs-wallet-client",
   "author": {
     "name": "DigiByte",
     "email": "dev@digibyte.co"
@@ -40258,7 +40327,6 @@ module.exports={
   "bugs": {
     "url": "https://github.com/digicontributer/digibyte-js/issues"
   },
-  "bundleDependencies": false,
   "contributors": [
     {
       "name": "Daniel Cousens",
@@ -40310,11 +40378,10 @@ module.exports={
     "bs58": "=4.0.1",
     "elliptic": "=6.4.0",
     "inherits": "=2.0.1",
-    "lodash": "=4.17.11",
+    "lodash": "^4.17.15",
     "node-rsa": "latest",
     "sffc-encoder": "^0.1.9"
   },
-  "deprecated": false,
   "description": "A pure and powerful JavaScript DigiByte library.",
   "devDependencies": {
     "brfs": "^1.2.0",
@@ -40354,7 +40421,7 @@ module.exports={
     "lint": "gulp lint",
     "test": "gulp test"
   },
-  "version": "0.15.5"
+  "version": "0.15.8"
 }
 
 },{}],165:[function(require,module,exports){
@@ -46061,7 +46128,13 @@ utils.intFromLE = intFromLE;
 
 },{"bn.js":47,"minimalistic-assert":232,"minimalistic-crypto-utils":233}],200:[function(require,module,exports){
 module.exports={
-  "_from": "elliptic@=6.4.0",
+  "_args": [
+    [
+      "elliptic@6.4.0",
+      "F:\\Work\\DigiByte\\digibytejs-wallet-client"
+    ]
+  ],
+  "_from": "elliptic@6.4.0",
   "_id": "elliptic@6.4.0",
   "_inBundle": false,
   "_integrity": "sha1-ysmvh2LIWDYYcAPI3+GT5eLq5d8=",
@@ -46070,12 +46143,12 @@ module.exports={
   "_requested": {
     "type": "version",
     "registry": true,
-    "raw": "elliptic@=6.4.0",
+    "raw": "elliptic@6.4.0",
     "name": "elliptic",
     "escapedName": "elliptic",
-    "rawSpec": "=6.4.0",
+    "rawSpec": "6.4.0",
     "saveSpec": null,
-    "fetchSpec": "=6.4.0"
+    "fetchSpec": "6.4.0"
   },
   "_requiredBy": [
     "/browserify-sign",
@@ -46083,9 +46156,8 @@ module.exports={
     "/digibyte"
   ],
   "_resolved": "https://registry.npmjs.org/elliptic/-/elliptic-6.4.0.tgz",
-  "_shasum": "cac9af8762c85836187003c8dfe193e5e2eae5df",
-  "_spec": "elliptic@=6.4.0",
-  "_where": "/mnt/g/developer/digibyte/digiassets/digibytejs-wallet-client/node_modules/digibyte",
+  "_spec": "6.4.0",
+  "_where": "F:\\Work\\DigiByte\\digibytejs-wallet-client",
   "author": {
     "name": "Fedor Indutny",
     "email": "fedor@indutny.com"
@@ -46093,7 +46165,6 @@ module.exports={
   "bugs": {
     "url": "https://github.com/indutny/elliptic/issues"
   },
-  "bundleDependencies": false,
   "dependencies": {
     "bn.js": "^4.4.0",
     "brorand": "^1.0.1",
@@ -46103,7 +46174,6 @@ module.exports={
     "minimalistic-assert": "^1.0.0",
     "minimalistic-crypto-utils": "^1.0.0"
   },
-  "deprecated": false,
   "description": "EC cryptography",
   "devDependencies": {
     "brfs": "^1.4.3",
@@ -48970,7 +49040,7 @@ exports.lang = KJUR.lang;
 /**
  * @license
  * Lodash <https://lodash.com/>
- * Copyright JS Foundation and other contributors <https://js.foundation/>
+ * Copyright OpenJS Foundation and other contributors <https://openjsf.org/>
  * Released under MIT license <https://lodash.com/license>
  * Based on Underscore.js 1.8.3 <http://underscorejs.org/LICENSE>
  * Copyright Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -48981,7 +49051,7 @@ exports.lang = KJUR.lang;
   var undefined;
 
   /** Used as the semantic version number. */
-  var VERSION = '4.17.11';
+  var VERSION = '4.17.15';
 
   /** Used as the size to enable large array optimizations. */
   var LARGE_ARRAY_SIZE = 200;
@@ -51640,16 +51710,10 @@ exports.lang = KJUR.lang;
         value.forEach(function(subValue) {
           result.add(baseClone(subValue, bitmask, customizer, subValue, value, stack));
         });
-
-        return result;
-      }
-
-      if (isMap(value)) {
+      } else if (isMap(value)) {
         value.forEach(function(subValue, key) {
           result.set(key, baseClone(subValue, bitmask, customizer, key, value, stack));
         });
-
-        return result;
       }
 
       var keysFunc = isFull
@@ -52573,8 +52637,8 @@ exports.lang = KJUR.lang;
         return;
       }
       baseFor(source, function(srcValue, key) {
+        stack || (stack = new Stack);
         if (isObject(srcValue)) {
-          stack || (stack = new Stack);
           baseMergeDeep(object, source, key, srcIndex, baseMerge, customizer, stack);
         }
         else {
@@ -54391,7 +54455,7 @@ exports.lang = KJUR.lang;
       return function(number, precision) {
         number = toNumber(number);
         precision = precision == null ? 0 : nativeMin(toInteger(precision), 292);
-        if (precision) {
+        if (precision && nativeIsFinite(number)) {
           // Shift with exponential notation to avoid floating-point issues.
           // See [MDN](https://mdn.io/round#Examples) for more details.
           var pair = (toString(number) + 'e').split('e'),
@@ -55574,7 +55638,7 @@ exports.lang = KJUR.lang;
     }
 
     /**
-     * Gets the value at `key`, unless `key` is "__proto__".
+     * Gets the value at `key`, unless `key` is "__proto__" or "constructor".
      *
      * @private
      * @param {Object} object The object to query.
@@ -55582,6 +55646,10 @@ exports.lang = KJUR.lang;
      * @returns {*} Returns the property value.
      */
     function safeGet(object, key) {
+      if (key === 'constructor' && typeof object[key] === 'function') {
+        return;
+      }
+
       if (key == '__proto__') {
         return;
       }
@@ -59382,6 +59450,7 @@ exports.lang = KJUR.lang;
           }
           if (maxing) {
             // Handle invocations in a tight loop.
+            clearTimeout(timerId);
             timerId = setTimeout(timerExpired, wait);
             return invokeFunc(lastCallTime);
           }
@@ -63768,9 +63837,12 @@ exports.lang = KJUR.lang;
       , 'g');
 
       // Use a sourceURL for easier debugging.
+      // The sourceURL gets injected into the source that's eval-ed, so be careful
+      // with lookup (in case of e.g. prototype pollution), and strip newlines if any.
+      // A newline wouldn't be a valid sourceURL anyway, and it'd enable code injection.
       var sourceURL = '//# sourceURL=' +
-        ('sourceURL' in options
-          ? options.sourceURL
+        (hasOwnProperty.call(options, 'sourceURL')
+          ? (options.sourceURL + '').replace(/[\r\n]/g, ' ')
           : ('lodash.templateSources[' + (++templateCounter) + ']')
         ) + '\n';
 
@@ -63803,7 +63875,9 @@ exports.lang = KJUR.lang;
 
       // If `variable` is not specified wrap a with-statement around the generated
       // code to add the data object to the top of the scope chain.
-      var variable = options.variable;
+      // Like with sourceURL, we take care to not check the option's prototype,
+      // as this configuration is a code injection vector.
+      var variable = hasOwnProperty.call(options, 'variable') && options.variable;
       if (!variable) {
         source = 'with (obj) {\n' + source + '\n}\n';
       }
@@ -66008,10 +66082,11 @@ exports.lang = KJUR.lang;
     baseForOwn(LazyWrapper.prototype, function(func, methodName) {
       var lodashFunc = lodash[methodName];
       if (lodashFunc) {
-        var key = (lodashFunc.name + ''),
-            names = realNames[key] || (realNames[key] = []);
-
-        names.push({ 'name': methodName, 'func': lodashFunc });
+        var key = lodashFunc.name + '';
+        if (!hasOwnProperty.call(realNames, key)) {
+          realNames[key] = [];
+        }
+        realNames[key].push({ 'name': methodName, 'func': lodashFunc });
       }
     });
 
@@ -70885,7 +70960,7 @@ module.exports.makeScheme = function (key, options) {
 
         /* Type 1: zeros padding for private key decrypt */
         if (options.type === 1) {
-            if (buffer[0] !== 0 && buffer[1] !== 1) {
+            if (buffer[0] !== 0 || buffer[1] !== 1) {
                 return null;
             }
             i = 3;
@@ -70896,7 +70971,7 @@ module.exports.makeScheme = function (key, options) {
             }
         } else {
             /* random padding for public key decrypt */
-            if (buffer[0] !== 0 && buffer[1] !== 2) {
+            if (buffer[0] !== 0 || buffer[1] !== 2) {
                 return null;
             }
             i = 3;
@@ -71265,7 +71340,7 @@ module.exports.get32IntFromBuffer = function (buffer, offset) {
     var size = 0;
     if ((size = buffer.length - offset) > 0) {
         if (size >= 4) {
-            return buffer.readUInt32BE(offset);
+            return buffer.readUIntBE(offset, size);
         } else {
             var res = 0;
             for (var i = offset + size, d = 0; i > offset; i--, d += 2) {
@@ -86038,7 +86113,7 @@ var objectKeys = Object.keys || function (obj) {
 module.exports = Duplex;
 
 /*<replacement>*/
-var util = require('core-util-is');
+var util = Object.create(require('core-util-is'));
 util.inherits = require('inherits');
 /*</replacement>*/
 
@@ -86157,7 +86232,7 @@ module.exports = PassThrough;
 var Transform = require('./_stream_transform');
 
 /*<replacement>*/
-var util = require('core-util-is');
+var util = Object.create(require('core-util-is'));
 util.inherits = require('inherits');
 /*</replacement>*/
 
@@ -86240,7 +86315,7 @@ function _isUint8Array(obj) {
 /*</replacement>*/
 
 /*<replacement>*/
-var util = require('core-util-is');
+var util = Object.create(require('core-util-is'));
 util.inherits = require('inherits');
 /*</replacement>*/
 
@@ -87265,7 +87340,7 @@ module.exports = Transform;
 var Duplex = require('./_stream_duplex');
 
 /*<replacement>*/
-var util = require('core-util-is');
+var util = Object.create(require('core-util-is'));
 util.inherits = require('inherits');
 /*</replacement>*/
 
@@ -87477,7 +87552,7 @@ var Duplex;
 Writable.WritableState = WritableState;
 
 /*<replacement>*/
-var util = require('core-util-is');
+var util = Object.create(require('core-util-is'));
 util.inherits = require('inherits');
 /*</replacement>*/
 
@@ -94415,7 +94490,7 @@ module.exports={
   "dependencies": {
     "async": "^0.9.0",
     "bip38": "^1.3.0",
-    "digibyte": "^0.15.5",
+    "digibyte": "git://github.com/digicontributer/digibyte-js.git#40858dc83c5b8b3579ded20a61c88930c22b00d2",
     "digibytejs-mnemonic": "1.5.2",
     "digibytejs-payment-protocol": "1.7.2",
     "json-stable-stringify": "^1.0.0",
@@ -94434,13 +94509,14 @@ module.exports={
     "sinon": "^1.10.3",
     "supertest": "^3.0.0",
     "tingodb": "^0.3.4",
-    "uglify": "^0.1.1",
+    "uglify-es": "^3.3.0",
     "uuid": "^2.0.1",
     "grunt-jsdox": "matiu/grunt-jsdox#update/jsdoc-4.10"
   },
   "scripts": {
     "start": "node app.js",
     "coverage": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha -- --reporter spec test",
+    "build": "./node_modules/.bin/browserify index.js > digibytejs-wallet-client.js && ./node_modules/.bin/uglifyjs digibytejs-wallet-client.js -o digibytejs-wallet-client.min.js",
     "test": "./node_modules/.bin/mocha",
     "coveralls": "./node_modules/.bin/istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- -R spec && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage",
     "docs": "./node_modules/.bin/jsdox lib/* lib/common lib/errors -o docs && cat README.header.md  docs/*.md LICENSE > README.md"
