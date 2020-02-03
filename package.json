@@ -25,7 +25,7 @@
   "dependencies": {
     "async": "^0.9.0",
     "bip38": "^1.3.0",
-    "digibyte": "git://github.com/digicontributer/digibyte-js.git#40858dc83c5b8b3579ded20a61c88930c22b00d2",
+    "digibyte": "git://github.com/digicontributer/digibyte-js.git#27156cd1cb4430c4a4959f46e809629846694434",
     "digibytejs-mnemonic": "1.5.2",
     "digibytejs-payment-protocol": "1.7.2",
     "json-stable-stringify": "^1.0.0",
