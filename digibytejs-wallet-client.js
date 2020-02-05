@@ -218,6 +218,7 @@ API.prototype._processTxps = function(txps) {
     txp.message = API._decryptMessage(txp.message, encryptingKey) || null;
     txp.creatorName = API._decryptMessage(txp.creatorName, encryptingKey);
     txp.assetData = txp.assetData;
+    txp.hasAsset = txp.hasAsset;
 
     _.each(txp.actions, function(action) {
       action.copayerName = API._decryptMessage(action.copayerName, encryptingKey);
